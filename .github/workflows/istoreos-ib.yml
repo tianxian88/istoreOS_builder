@@ -204,8 +204,10 @@ jobs:
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: \${{ env.BUILD_TAG }}
-          name: iStoreOS 固件定制版 [\${{ env.FIRMWARE_VERSION }}]
+          tag_name: ${{ env.BUILD_TAG }}
+          name: iStoreOS  [${{ env.FIRMWARE_VERSION }}]
           body_path: ./artifact/release_notes.md
           files: ./artifact/iStoreOS-*
-          token: \${{ secrets.GITHUB_TOKEN }}
+          fail_on_unmatched_files: false # 【加固】如果文件匹配遇到死锁，防止整个流崩塌
+          token: ${{ github.token }}     # 【修复】直接调用系统的上下文 token 强制对齐顶部 contents: write 权限
+
