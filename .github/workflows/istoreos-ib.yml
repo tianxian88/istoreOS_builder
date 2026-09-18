@@ -1,4 +1,4 @@
-name: Build iStoreOS x86_64 & Auto Release
+name: Build iStoreOS 24.10 Custom Firmware
 
 on:
   workflow_dispatch: # 支持手动触发编译
@@ -12,13 +12,13 @@ on:
       - '.github/workflows/**'
 
 env:
-  # iStoreOS ImageBuilder 下载地址（以 x86_64 架构为例）
+  # iStoreOS 24.10 (x86_64) ImageBuilder 官方下载地址
   IB_URL: https://fw20.koolcenter.com/iStoreOS/ib/x86_64/istoreos-imagebuilder-x86-64.Linux-x86_64.tar.zst
 
 jobs:
   build:
     runs-on: ubuntu-22.04
-    # 赋予工作流创建 Release 和删除历史记录的权限
+    # 赋予工作流创建 Release 和删除历史记录的完整权限
     permissions:
       contents: write
       actions: write
@@ -37,20 +37,13 @@ jobs:
         run: |
           mkdir -p openwrt-ib
           echo "📥 开始下载 iStoreOS ImageBuilder..."
-          
-          # 下载为本地实体临时文件
-          wget -qO ib_archive.tar.zst "${{ env.IB_URL }}"
-          
-          # 验证文件是否存在且不为空（防止下载到 404 网页或网络中断断流）
+          wget -qO ib_archive.tar.zst "\${{ env.IB_URL }}"
           if [ ! -s "ib_archive.tar.zst" ]; then
-            echo "❌ 错误: 固件生成器下载失败！请检查链接是否有效: ${{ env.IB_URL }}"
+            echo "❌ 错误: 固件生成器下载失败！请检查链接是否有效。"
             exit 1
           fi
-          
           echo "📦 下载完成，正在解压固件生成器..."
           tar --zstd -xf ib_archive.tar.zst -C openwrt-ib --strip-components=1
-          
-          # 解压完成，及时清理缓存文件
           rm -f ib_archive.tar.zst
           echo "✅ 固件生成器准备就绪！"
 
@@ -61,7 +54,7 @@ jobs:
             echo "OFFICIAL_PKGS=" >> \$GITHUB_ENV
             exit 0
           fi
-
+          # 读取官方包名文件：过滤掉注释行(#)和空行，转换为单行空格分隔的字符串
           OFFICIAL_PKGS=\((grep -v '^#' official_packages.txt \vert{} grep -v '^\)' | tr '\n' ' ')
           echo "📦 Loaded Official Packages: \$OFFICIAL_PKGS"
           echo "OFFICIAL_PKGS=\(OFFICIAL_PKGS" >> \)GITHUB_ENV
@@ -82,90 +75,72 @@ jobs:
           CUSTOM_PKGS=""
           count=0
           
-          # 读取链接文件并处理
+          # 逐行读取链接文件并【立即流式处理】
           while read -r line || [ -n "$line" ]; do
             # 过滤掉注释行和空行
             [[ "$line" =~ ^# ]] && continue
             [[ -z "$line" ]] && continue
             
             count=$((count+1))
-            custom_prefix=""
             url=""
             
-            # 1. 智能拆分包名和URL（支持逗号或分号）
+            # 智能拆分：如果带有前缀，忽略别名只取真实 URL
             if [[ "$line" == *","* ]]; then
-              custom_prefix=$(echo "$line" | cut -d',' -f1 | tr -d ' ')
               url=$(echo "$line" | cut -d',' -f2- | tr -d ' ')
             elif [[ "$line" == *";"* ]]; then
-              custom_prefix=$(echo "$line" | cut -d';' -f1 | tr -d ' ')
               url=$(echo "$line" | cut -d';' -f2- | tr -d ' ')
             else
               url=$(echo "$line" | tr -d ' ')
             fi
 
-            # 2. 核心改进：直接检测下载链接（URL）的后缀（转小写匹配）
-            lower_url=$(echo "$url" | tr 'A-Z' 'a-z')
+            # 提取去除链接尾部参数后的纯净基础文件名
+            clean_url="${url%%?*}"
+            orig_filename=$(basename "$clean_url")
             
-            # 去除可能存在的问号参数后再进行后缀匹配判断
-            clean_lower_url=$(echo "$lower_url" | cut -d'?' -f1)
-            
-            case "$clean_lower_url" in
+            # 严格匹配纯净 URL 后缀（转小写）
+            lower_url=$(echo "$clean_url" | tr 'A-Z' 'a-z')
+            case "$lower_url" in
               *.tar.gz|*.tgz)
                 is_tarball=true
+                echo "📥 [第 ${count} 步] 识别为压缩包 -> 保持网络原名直接下载: $orig_filename"
                 ;;
               *)
                 is_tarball=false
+                echo "📥 [第 ${count} 步] 识别为单体IPK -> 保持网络原名直接下载: $orig_filename"
                 ;;
             esac
-
-            # 3. 提取基础文件名，并设置安全的兜底
-            clean_url=$(echo "$url" | cut -d'?' -f1)
-            orig_filename=$(basename "$clean_url")
-            if [ -z "$orig_filename" ]; then
-              orig_filename="pkg_${count}.tar.gz"
-            fi
-
-            # 4. 根据类型和是否有前缀，决定落地文件名
-            if [ "$is_tarball" = false ]; then
-              download_filename="$orig_filename"
-              echo "📥 Line [${count}] -> [IPK单包] 链接识别为IPK，保持原名直接下载: $download_filename"
-            else
-              if [ -n "$custom_prefix" ]; then
-                download_filename="${custom_prefix}_${orig_filename}"
-              else
-                download_filename="${count}_${orig_filename}"
-              fi
-              echo "📥 Line [${count}] -> [压缩包] 链接识别为Tarball，落地为: $download_filename"
-            fi
             
-            # 5. 执行下载到指定的目标 packages 目录中
-            wget -qO "$PKG_DIR/$download_filename" "$url"
+            # 1. 立即下载当前文件到 packages 目录中
+            wget -qO "$PKG_DIR/$orig_filename" "$url"
             
-            if [ ! -s "$PKG_DIR/$download_filename" ]; then
+            if [ ! -s "$PKG_DIR/$orig_filename" ]; then
               echo "❌ Error: Failed to download or file is empty: $url"
-              rm -f "$PKG_DIR/$download_filename"
+              rm -f "$PKG_DIR/$orig_filename"
               continue
             fi
 
-            # 6. 如果是压缩包，下载完后立即执行解压并清理原压缩包
+            # 2. 【核心诉求落实】如果是压缩包，【立即原地解压并删除自身】
+            # 这样在进入下一行循环前，重名的压缩包在磁盘上已经被彻底消灭，绝不耽误下一个重名文件的下载
             if [ "$is_tarball" = true ]; then
-              echo "📦 Extracting tarball: $download_filename"
-              tar -zxf "$PKG_DIR/$download_filename" -C "$PKG_DIR"
-              rm -f "$PKG_DIR/$download_filename"
+              echo "📦 发现压缩包，立即原地解压还原其内部原始文件名..."
+              tar -zxf "$PKG_DIR/$orig_filename" -C "$PKG_DIR"
+              rm -f "$PKG_DIR/$orig_filename"
+              echo "🗑️ 压缩包 $orig_filename 已立竿见影清理完毕！"
             fi
+            
+            echo "--------------------------------------------------"
           done < custom_packages.txt
           
-          # 7. 切换到 packages 目录执行扁平化和包名提取
+          # 3. 所有行流式处理全部结束后，切换到 packages 目录执行扁平化和包名提取
           cd "$PKG_DIR"
           
           # 【扁平化处理】如果压缩包解压出了嵌套文件夹，把深层目录下的 .ipk 全部移动到当前根目录下
           find . -mindepth 2 -name "*.ipk" -exec mv {} . \;
           
-          # 8. 动态扫描当前所有实际存在的 .ipk 文件，精准提取包名
+          # 4. 动态扫描当前所有实际存在的 .ipk 文件，精准提取包名
           for file in *.ipk; do
             if [ -f "$file" ]; then
-              pkg_name=$(echo "$file" | cut -d'_' -f1)
-              # 避免重复添加包名
+              pkg_name=$(echo "$file" | cut -d'_' -f1 | sed 's/\.ipk$//')
               if [[ ! " $CUSTOM_PKGS " == *" $pkg_name "* ]]; then
                 CUSTOM_PKGS="$CUSTOM_PKGS $pkg_name"
               fi
@@ -174,7 +149,6 @@ jobs:
           
           echo "📦 Final Extracted Custom Packages: $CUSTOM_PKGS"
           echo "CUSTOM_PKGS=$CUSTOM_PKGS" >> $GITHUB_ENV
-
 
 
       - name: Execute Custom Modify Script
@@ -194,33 +168,34 @@ jobs:
         run: |
           if [ -d "files" ]; then
             echo "📂 Custom files directory found."
-            echo "IB_FILES_PARAM=FILES=(pwd)/files" >> GITHUB_ENV
+            echo "CUSTOM_FILES_PATH=\((pwd)/files" >> \)GITHUB_ENV
           else
-            echo "ℹ️ No custom files directory found, skipping file integration."
-            echo "IB_FILES_PARAM=" >> \$GITHUB_ENV
+            echo "ℹ️ No custom files directory found."
+            echo "CUSTOM_FILES_PATH=" >> \$GITHUB_ENV
           fi
 
       - name: Generate Firmware Image
         run: |
           cd openwrt-ib
           
-          # 1. 严格使用单行空格拼接，并在 shell 中完成组合
-          # 注意：不要在 YAML 层用反斜杠转义 $，直接用 Linux Shell 的标准变量语法
-          FINAL_PKGS="luci-base luci-compat $OFFICIAL_PKGS $CUSTOM_PKGS"
+          # 组合最终包名
+          FINAL_PKGS="luci-base luci-compat \(OFFICIAL_PKGS\)CUSTOM_PKGS"
+          echo "🚀 Final packages list passing to make image: \$FINAL_PKGS"
           
-          echo "🚀 Final packages list passing to make image: $FINAL_PKGS"
-          echo "🛠️ Files Parameter: ${{ env.IB_FILES_PARAM }}"
-          
-          # 2. 执行打包命令，把变量用双引号包裹以防空格截断
-          # 同时使用三元判断或直接传递环境变量
-          make image PROFILE="generic" PACKAGES="$FINAL_PKGS" ${{ env.IB_FILES_PARAM }}
-
+          # 判断是否存在自定义文件目录，动态决定是否附加 FILES= 参数
+          if [ -n "\${{ env.CUSTOM_FILES_PATH }}" ]; then
+            echo "🛠️ Injecting custom files from: \${{ env.CUSTOM_FILES_PATH }}"
+            make image PROFILE="generic" PACKAGES="\(FINAL_PKGS" FILES="\){{ env.CUSTOM_FILES_PATH }}"
+          else
+            echo "ℹ️ Building standard image without extra files."
+            make image PROFILE="generic" PACKAGES="\$FINAL_PKGS"
+          fi
 
       - name: Organize Files and Extract Version
         run: |
           mkdir -p ./artifact
           
-          # 1. 动态提取 iStoreOS 官方版本号
+          # 1. 从 .config 中提取 iStoreOS 官方的版本号
           ISTOREOS_VERSION=\$(grep "CONFIG_VERSION_NUMBER=" openwrt-ib/.config | cut -d'"' -f2)
           BUILD_DATE=\$(date +%Y%m%d)
           
@@ -229,21 +204,21 @@ jobs:
           echo "BUILD_TAG=\${ISTOREOS_VERSION}-\({BUILD_DATE}" >> \)GITHUB_ENV
           
           # 3. 收集固件并优雅地重命名
-          find openwrt-ib/bin/targets/ -type f  -name "*sysupgrade*" -o -name "*combined*"  | while read -r file; do
-            filename=(basename "file")
+          find openwrt-ib/bin/targets/ -type f \( -name "*sysupgrade*" -o -name "*combined*" \) | while read -r file; do
+            filename=\((basename "\)file")
             # 过滤掉中间生成的无用符号文件
             if [[ "\$filename" != *"vmlinux"* ]]; then
-              custom_name="iStoreOS-\({ISTOREOS_VERSION}-x86_64-\){filename}"
-              cp "file" "./artifact/{custom_name}"
+              custom_name="iStoreOS-\({ISTOREOS_VERSION}-x86-64-\){filename}"
+              cp "\(file" "./artifact/\){custom_name}"
               echo "📄 Saved artifact as: \${custom_name}"
             fi
           done
           
           # 4. 生成编译日志说明
-          echo "### 固件定制信息" > ./artifact/release_notes.md
-          echo "* **iStoreOS 基准版本**: \${ISTOREOS_VERSION}" >> ./artifact/release_notes.md
-          echo "* **编译日期**: \$(date '+%Y-%m-%d %H:%M:%S')" >> ./artifact/release_notes.md
-          echo "* **集成的自定义插件**: " >> ./artifact/release_notes.md
+          echo "### iStoreOS 24.10 定制固件发布" > ./artifact/release_notes.md
+          echo "* **基准版本**: \${ISTOREOS_VERSION}" >> ./artifact/release_notes.md
+          echo "* **编译时间**: \$(date '+%Y-%m-%d %H:%M:%S')" >> ./artifact/release_notes.md
+          echo "* **集成的自定义插件列表**: " >> ./artifact/release_notes.md
           echo "\`\`\`" >> ./artifact/release_notes.md
           echo "${{ env.CUSTOM_PKGS }}" | tr ' ' '\n' >> ./artifact/release_notes.md
           echo "\`\`\`" >> ./artifact/release_notes.md
@@ -261,6 +236,10 @@ jobs:
         uses: Mattraks/delete-workflow-runs@v2
         with:
           token: \${{ secrets.GITHUB_TOKEN }}
+          repository: \${{ github.repository }}
+          retain_days: 0          # 不保留历史运行记录的天数
+          keep_minimum_runs: 1    # 永远仅保留最近成功的这 1 次运行记录，其余全部自动擦除
+
           repository: \${{ github.repository }}
           retain_days: 0          # 不保留过往历史的天数（可根据需要设为 1 或 3）
           keep_minimum_runs: 1    # 仅保留最近成功的 1 次运行记录，其余全部自动删除
