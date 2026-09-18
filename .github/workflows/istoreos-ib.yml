@@ -13,7 +13,7 @@ on:
 
 env:
   # iStoreOS ImageBuilder 下载地址（以 x86_64 架构为例）
-  IB_URL: https://fw0.koolcenter.com/iStoreOS/ib/x86_64/istoreos-imagebuilder-x86-64.Linux-x86_64.tar.zst
+  IB_URL: https://fw20.koolcenter.com/iStoreOS/ib/x86_64/istoreos-imagebuilder-x86-64.Linux-x86_64.tar.zst
 
 jobs:
   build:
@@ -36,7 +36,23 @@ jobs:
       - name: Download and Extract ImageBuilder
         run: |
           mkdir -p openwrt-ib
-          wget -qO- "\$IB_URL" | tar --zstd -xC openwrt-ib --strip-components=1
+          echo "📥 开始下载 iStoreOS ImageBuilder..."
+          
+          # 下载为本地实体临时文件
+          wget -qO ib_archive.tar.zst "${{ env.IB_URL }}"
+          
+          # 验证文件是否存在且不为空（防止下载到 404 网页或网络中断断流）
+          if [ ! -s "ib_archive.tar.zst" ]; then
+            echo "❌ 错误: 固件生成器下载失败！请检查链接是否有效: ${{ env.IB_URL }}"
+            exit 1
+          fi
+          
+          echo "📦 下载完成，正在解压固件生成器..."
+          tar --zstd -xf ib_archive.tar.zst -C openwrt-ib --strip-components=1
+          
+          # 解压完成，及时清理缓存文件
+          rm -f ib_archive.tar.zst
+          echo "✅ 固件生成器准备就绪！"
 
       - name: Load Official Packages List
         run: |
