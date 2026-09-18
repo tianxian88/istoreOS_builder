@@ -103,13 +103,13 @@ jobs:
               url=$(echo "$line" | tr -d ' ')
             fi
 
-            # 2. 提取去除链接尾部参数后的纯净基础文件名
-            pure_url="${url%%?*}"
-            orig_filename=$(basename "$pure_url")
+            # 2. 核心改进：直接检测下载链接（URL）的后缀（转小写匹配）
+            lower_url=$(echo "$url" | tr 'A-Z' 'a-z')
             
-            # 3. 严格匹配文件后缀判断类型（转小写）
-            lower_filename=$(echo "$orig_filename" | tr 'A-Z' 'a-z')
-            case "$lower_filename" in
+            # 去除可能存在的问号参数后再进行后缀匹配判断
+            clean_lower_url=$(echo "$lower_url" | cut -d'?' -f1)
+            
+            case "$clean_lower_url" in
               *.tar.gz|*.tgz)
                 is_tarball=true
                 ;;
@@ -118,19 +118,24 @@ jobs:
                 ;;
             esac
 
-            # 4. 执行你的核心诉求：
-            # 如果是普通的 .ipk 文件，百分之百直接下载保存，保留原有文件名，绝不重命名！
+            # 3. 提取基础文件名，并设置安全的兜底
+            clean_url=$(echo "$url" | cut -d'?' -f1)
+            orig_filename=$(basename "$clean_url")
+            if [ -z "$orig_filename" ]; then
+              orig_filename="pkg_${count}.tar.gz"
+            fi
+
+            # 4. 根据类型和是否有前缀，决定落地文件名
             if [ "$is_tarball" = false ]; then
               download_filename="$orig_filename"
-              echo "📥 Line [${count}] -> [IPK格式] 保持原文件名直接下载: $download_filename | URL: $url"
+              echo "📥 Line [${count}] -> [IPK单包] 链接识别为IPK，保持原名直接下载: $download_filename"
             else
-              # 只有压缩包才使用防冲突重命名机制
               if [ -n "$custom_prefix" ]; then
                 download_filename="${custom_prefix}_${orig_filename}"
               else
                 download_filename="${count}_${orig_filename}"
               fi
-              echo "📥 Line [${count}] -> [压缩包格式] 为防冲突落地为: $download_filename | URL: $url"
+              echo "📥 Line [${count}] -> [压缩包] 链接识别为Tarball，落地为: $download_filename"
             fi
             
             # 5. 执行下载到指定的目标 packages 目录中
@@ -169,6 +174,7 @@ jobs:
           
           echo "📦 Final Extracted Custom Packages: $CUSTOM_PKGS"
           echo "CUSTOM_PKGS=$CUSTOM_PKGS" >> $GITHUB_ENV
+
 
 
       - name: Execute Custom Modify Script
