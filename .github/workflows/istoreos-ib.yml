@@ -50,13 +50,16 @@ jobs:
         run: |
           if [ ! -f "official_packages.txt" ]; then
             echo "⚠️ Warning: official_packages.txt not found, using empty list."
-            echo "OFFICIAL_PKGS=" >> \$GITHUB_ENV
+            echo "OFFICIAL_PKGS=" >> $GITHUB_ENV
             exit 0
           fi
-          # 读取官方包名文件：过滤掉注释行(#)和空行，转换为单行空格分隔的字符串
-          OFFICIAL_PKGS=\((grep -v '^#' official_packages.txt \vert{} grep -v '^\)' | tr '\n' ' ')
-          echo "📦 Loaded Official Packages: \$OFFICIAL_PKGS"
-          echo "OFFICIAL_PKGS=\(OFFICIAL_PKGS" >> \)GITHUB_ENV
+          
+          # 精准清洗：过滤掉注释行、空行和 Windows 换行符，将多行包名完美转换为单行空格分隔
+          OFFICIAL_PKGS=$(cat official_packages.txt | grep -v '^#' | grep -v '^$' | tr '\r' ' ' | tr '\n' ' ')
+          
+          echo "📦 Loaded Official Packages: $OFFICIAL_PKGS"
+          echo "OFFICIAL_PKGS=$OFFICIAL_PKGS" >> $GITHUB_ENV
+
 
       - name: Download Third-Party IPKs from File
         run: |
