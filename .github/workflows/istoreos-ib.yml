@@ -182,8 +182,18 @@ jobs:
       - name: Generate Firmware Image
         run: |
           cd openwrt-ib
-          FINAL_PKGS="luci-base luci-compat \({{ env.OFFICIAL_PKGS }}\){{ env.CUSTOM_PKGS }}"
-          make image PROFILE="generic" PACKAGES="\(FINAL_PKGS" \){{ env.IB_FILES_PARAM }}
+          
+          # 1. 严格使用单行空格拼接，并在 shell 中完成组合
+          # 注意：不要在 YAML 层用反斜杠转义 $，直接用 Linux Shell 的标准变量语法
+          FINAL_PKGS="luci-base luci-compat $OFFICIAL_PKGS $CUSTOM_PKGS"
+          
+          echo "🚀 Final packages list passing to make image: $FINAL_PKGS"
+          echo "🛠️ Files Parameter: ${{ env.IB_FILES_PARAM }}"
+          
+          # 2. 执行打包命令，把变量用双引号包裹以防空格截断
+          # 同时使用三元判断或直接传递环境变量
+          make image PROFILE="generic" PACKAGES="$FINAL_PKGS" ${{ env.IB_FILES_PARAM }}
+
 
       - name: Organize Files and Extract Version
         run: |
