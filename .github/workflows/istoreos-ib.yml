@@ -224,7 +224,8 @@ jobs:
       - name: Clean Up Old Workflow Runs
         uses: Mattraks/delete-workflow-runs@v2
         with:
-          token: \${{ secrets.GITHUB_TOKEN }}
-          repository: \${{ github.repository }}
-          retain_days: 0          # 不保留过往历史的天数（可根据需要设为 1 或 3）
-          keep_minimum_runs: 1    # 仅保留最近成功的 1 次运行记录，其余全部自动删除
+          token: ${{ github.token }}      # 【修复】去掉反斜杠，直接调用系统原生令牌
+          repository: ${{ github.repository }} # 【修复】去掉反斜杠，确保仓库名不会变成带斜杠的错位路径
+          retain_days: 0          # 不保留过往历史的天数
+          keep_minimum_runs: 1    # 仅保留最近成功的这 1 次运行记录，其余全自动擦除
+
