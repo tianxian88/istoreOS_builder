@@ -2,59 +2,64 @@
 # ========================================================
 # 固件编译前定制脚本（支持自定义修改、预下载数据库与内核等）
 # 注意：此时当前工作目录（PWD）是在 openwrt-ib 目录下
-# 我们需要把文件下载到上层目录的 files/ 中
 # ========================================================
 
 echo "🔧 正在执行自定义高级预处理脚本..."
 
-# 定义上层仓库的 files 路径
+# 此时 PWD 是 openwrt-ib，所以上一层才是仓库根目录
 REPO_FILES_DIR="../files"
-OPENCLASH_DIR="\${REPO_FILES_DIR}/etc/openclash"
-CORE_DIR="\${OPENCLASH_DIR}/core"
+OPENCLASH_DIR="${REPO_FILES_DIR}/etc/openclash"
+CORE_DIR="${OPENCLASH_DIR}/core"
 
 # 创建所需的本地目录结构
-mkdir -p "\${CORE_DIR}"
+mkdir -p "${OPENCLASH_DIR}"
+mkdir -p "${CORE_DIR}"
 
 # --------------------------------------------------------
-# 1. 下载 OpenClash GeoIP 数据库 (Country.mmdb)
+# 1. 批量下载 OpenClash 所需的 4 个核心数据库文件
 # --------------------------------------------------------
-echo "📥 正在下载 GeoIP 数据库 (Country.mmdb)..."
-# 使用 Loyalsoldier 维护的经典版本，或替换为你信任的源
-GEOIP_URL="https://github.com"
-wget -qO "\({OPENCLASH_DIR}/Country.mmdb" "\)GEOIP_URL"
+echo "📥 正在下载 OpenClash 专属数据库组件..."
 
-if [ -s "\${OPENCLASH_DIR}/Country.mmdb" ]; then
-    echo "✅ Country.mmdb 下载成功！"
+# [1/4] Country.mmdb (全球 IP 库 / Lite 版中国 IP 列表)
+URL_MMDB="https://testingcf.jsdelivr.net/gh/alecthw/mmdb_china_ip_list@release/lite/Country.mmdb"
+wget -qO "${OPENCLASH_DIR}/Country.mmdb" "$URL_MMDB"
+[ -s "${OPENCLASH_DIR}/Country.mmdb" ] && echo "  ✅ Country.mmdb 下载成功！" || echo "  ❌ Country.mmdb 下载失败！"
+
+# [2/4] geoip.dat (GeoIP 数据流)
+URL_GEOIP="https://testingcf.jsdelivr.net/gh/Loyalsoldier/v2ray-rules-dat@release/geoip.dat"
+wget -qO "${OPENCLASH_DIR}/geoip.dat" "$URL_GEOIP"
+[ -s "${OPENCLASH_DIR}/geoip.dat" ] && echo "  ✅ geoip.dat 下载成功！" || echo "  ❌ geoip.dat 下载失败！"
+
+# [3/4] geosite.dat (GeoSite 域名路由规则)
+URL_GEOSITE="https://testingcf.jsdelivr.net/gh/Loyalsoldier/v2ray-rules-dat@release/geosite.dat"
+wget -qO "${OPENCLASH_DIR}/geosite.dat" "$URL_GEOSITE"
+[ -s "${OPENCLASH_DIR}/geosite.dat" ] && echo "  ✅ geosite.dat 下载成功！" || echo "  ❌ geosite.dat 下载失败！"
+
+# [4/4] GeoLite2-ASN.mmdb (ASN 自主系统编号数据)
+# 注意：OpenClash 本地识别的名字通常也是 GeoLite2-ASN.mmdb
+URL_ASN="https://testingcf.jsdelivr.net/gh/xishang0128/geoip@release/GeoLite2-ASN.mmdb"
+wget -qO "${OPENCLASH_DIR}/GeoLite2-ASN.mmdb" "$URL_ASN"
+[ -s "${OPENCLASH_DIR}/GeoLite2-ASN.mmdb" ] && echo "  ✅ GeoLite2-ASN.mmdb 下载成功！" || echo "  ❌ GeoLite2-ASN.mmdb 下载失败！"
+
+# --------------------------------------------------------
+# 2. 下载 Mihomo (Clash Meta) 内核并预置 (单文件格式)
+# --------------------------------------------------------
+echo "📥 正在下载 Mihomo 内核 (单文件格式)..."
+MIHOMO_URL="https://raw.githubusercontent.com/tianxian88/mihomo/refs/heads/main/bin/meta/clash-linux-amd64"
+
+# 直接下载到目标位置，并重命名为 OpenClash 识别的 clash_meta
+wget -qO "${CORE_DIR}/clash_meta" "$MIHOMO_URL"
+
+if [ -s "${CORE_DIR}/clash_meta" ]; then
+    # 【核心步骤】赋予内核可执行权限，否则在固件中无法启动
+    chmod +x "${CORE_DIR}/clash_meta"
+    echo "✅ Mihomo 内核下载成功，并已预置为 clash_meta！"
 else
-    echo "❌ Country.mmdb 下载失败或文件为空，请检查链接！"
+    echo "❌ Mihomo 内核下载失败，请检查网络链接！"
 fi
 
 # --------------------------------------------------------
-# 2. 下载 Mihomo (Clash Meta) 内核并预置
+# ⚠️ 注意：保持默认，不对 repositories.conf 进行干预
 # --------------------------------------------------------
-echo "📥 正在下载 Mihomo 内核 (Meta 内核)..."
-# 这里以 x86_64 架构、Linux 系统的最新稳定版为例。如果固件是给 ARM 设备编译，请修改为对应的架构（如 armv8/arm64）
-MIHOMO_URL="https://github.com"
-
-# 下载并直接解压出内核文件
-wget -qO- "\(MIHOMO_URL" \vert{} tar -zxf - -C "\){CORE_DIR}"
-
-# OpenClash 识别 Meta 内核的文件名必须是 `clash_meta`
-if [ -f "\${CORE_DIR}/mihomo-linux-amd64-compatible" ]; then
-    mv "\({CORE_DIR}/mihomo-linux-amd64-compatible" "\){CORE_DIR}/clash_meta"
-    # 【核心步骤】赋予内核可执行权限，否则在固件中无法运行
-    chmod +x "\${CORE_DIR}/clash_meta"
-    echo "✅ Mihomo 内核下载并成功重命名为 clash_meta！"
-else
-    echo "❌ Mihomo 内核解压失败，请检查架构链接！"
-fi
-
-# --------------------------------------------------------
-# 3. 其它自定义修改（例如可选的软件源替换等）
-# --------------------------------------------------------
-if [ -f "repositories.conf" ]; then
-    echo "正在将官方软件源替换为腾讯云镜像源..."
-    sed -i 's|https://koolcenter.com|https://tencent.com|g' repositories.conf
-fi
 
 echo "✅ modify.sh 脚本全部执行完毕！"
