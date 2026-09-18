@@ -162,33 +162,44 @@ jobs:
         run: |
           mkdir -p ./artifact
           
-          # 1. 从 .config 中提取 iStoreOS 官方的版本号
-          ISTOREOS_VERSION=\$(grep "CONFIG_VERSION_NUMBER=" openwrt-ib/.config | cut -d'"' -f2)
-          BUILD_DATE=\$(date +%Y%m%d)
+          # 1. 从 .config 中精确提取 iStoreOS 官方的版本号
+          ISTOREOS_VERSION=$(grep "CONFIG_VERSION_NUMBER=" openwrt-ib/.config | cut -d'"' -f2)
+          BUILD_DATE=$(date +%Y%m%d)
           
           # 2. 将版本号与日期存入全局环境变量，供后续 Release 步骤调用
-          echo "FIRMWARE_VERSION=\({ISTOREOS_VERSION}" >> \)GITHUB_ENV
-          echo "BUILD_TAG=\${ISTOREOS_VERSION}-\({BUILD_DATE}" >> \)GITHUB_ENV
+          echo "FIRMWARE_VERSION=${ISTOREOS_VERSION}" >> $GITHUB_ENV
+          echo "BUILD_TAG=${ISTOREOS_VERSION}-${BUILD_DATE}" >> $GITHUB_ENV
           
-          # 3. 收集固件并优雅地重命名
-          find openwrt-ib/bin/targets/ -type f \( -name "*sysupgrade*" -o -name "*combined*" \) | while read -r file; do
-            filename=\((basename "\)file")
-            # 过滤掉中间生成的无用符号文件
-            if [[ "\$filename" != *"vmlinux"* ]]; then
-              custom_name="iStoreOS-\({ISTOREOS_VERSION}-x86-64-\){filename}"
-              cp "\(file" "./artifact/\){custom_name}"
-              echo "📄 Saved artifact as: \${custom_name}"
+          # 3. 收集固件并优雅地重命名（拆分为两条独立的 find 语句，彻底杜绝括号语法冲突）
+          
+          # 第一轮：搜集带 sysupgrade 的固件
+          find openwrt-ib/bin/targets/ -type f -name "*sysupgrade*" | while read -r file; do
+            filename=$(basename "$file")
+            if [[ "$filename" != *"vmlinux"* ]]; then
+              custom_name="iStoreOS-${ISTOREOS_VERSION}-x86-64-${filename}"
+              cp "$file" "./artifact/${custom_name}"
+              echo "📄 Saved artifact: ${custom_name}"
+            fi
+          done
+          
+          # 第二轮：搜集带 combined 的固件
+          find openwrt-ib/bin/targets/ -type f -name "*combined*" | while read -r file; do
+            filename=$(basename "$file")
+            if [[ "$filename" != *"vmlinux"* ]]; then
+              custom_name="iStoreOS-${ISTOREOS_VERSION}-x86-64-${filename}"
+              # 避免第一轮重复拷贝相同的文件
+              if [ ! -f "./artifact/${custom_name}" ]; then
+                cp "$file" "./artifact/${custom_name}"
+                echo "📄 Saved artifact: ${custom_name}"
+              fi
             fi
           done
           
           # 4. 生成编译日志说明
-          echo "### iStoreOS 24.10 定制固件发布" > ./artifact/release_notes.md
-          echo "* **基准版本**: \${ISTOREOS_VERSION}" >> ./artifact/release_notes.md
-          echo "* **编译时间**: \$(date '+%Y-%m-%d %H:%M:%S')" >> ./artifact/release_notes.md
-          echo "* **集成的自定义插件列表**: " >> ./artifact/release_notes.md
-          echo "\`\`\`" >> ./artifact/release_notes.md
-          echo "${{ env.CUSTOM_PKGS }}" | tr ' ' '\n' >> ./artifact/release_notes.md
-          echo "\`\`\`" >> ./artifact/release_notes.md
+          echo "### iStoreOS 定制固件自动化发布" > ./artifact/release_notes.md
+          echo "* **基准版本**: ${ISTOREOS_VERSION}" >> ./artifact/release_notes.md
+          echo "* **编译时间**: $(date '+%Y-%m-%d %H:%M:%S')" >> ./artifact/release_notes.md
+
 
       - name: Upload to GitHub Release
         uses: softprops/action-gh-release@v2
