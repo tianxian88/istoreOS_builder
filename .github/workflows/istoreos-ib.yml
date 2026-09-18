@@ -37,7 +37,7 @@ jobs:
         run: |
           mkdir -p openwrt-ib
           echo "📥 开始下载 iStoreOS ImageBuilder..."
-          wget -qO ib_archive.tar.zst "\${{ env.IB_URL }}"
+          wget -qO ib_archive.tar.zst "${{ env.IB_URL }}"
           if [ ! -s "ib_archive.tar.zst" ]; then
             echo "❌ 错误: 固件生成器下载失败！请检查链接是否有效。"
             exit 1
