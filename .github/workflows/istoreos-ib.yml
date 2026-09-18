@@ -1,0 +1,154 @@
+name: Build iStoreOS x86_64 & Auto Release
+
+on:
+  workflow_dispatch: # 支持手动触发编译
+  push:
+    branches: [ "main" ]
+    paths:
+      - 'custom_packages.txt'    # 修改第三方链接时触发
+      - 'official_packages.txt'  # 修改官方包名列表时触发
+      - 'files/**'               # 修改自定义 etc 等文件时触发
+      - 'modify.sh'              # 修改自定义编译脚本时触发
+      - '.github/workflows/**'
+
+env:
+  # iStoreOS ImageBuilder 下载地址（以 x86_64 架构为例）
+  IB_URL: https://fw0.koolcenter.com/iStoreOS/ib/x86_64/istoreos-imagebuilder-x86-64.Linux-x86_64.tar.zst
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    # 赋予工作流创建 Release 和删除历史记录的权限
+    permissions:
+      contents: write
+      actions: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Initialization Environment
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential libncurses5-dev libncursesw5-dev \
+            zlib1g-dev gawk git gettext libssl-dev xsltproc rsync wget unzip zstd
+
+      - name: Download and Extract ImageBuilder
+        run: |
+          mkdir -p openwrt-ib
+          wget -qO- "\$IB_URL" | tar --zstd -xC openwrt-ib --strip-components=1
+
+      - name: Load Official Packages List
+        run: |
+          if [ ! -f "official_packages.txt" ]; then
+            echo "⚠️ Warning: official_packages.txt not found, using empty list."
+            echo "OFFICIAL_PKGS=" >> \$GITHUB_ENV
+            exit 0
+          fi
+
+          OFFICIAL_PKGS=\((grep -v '^#' official_packages.txt \vert{} grep -v '^\)' | tr '\n' ' ')
+          echo "📦 Loaded Official Packages: \$OFFICIAL_PKGS"
+          echo "OFFICIAL_PKGS=\(OFFICIAL_PKGS" >> \)GITHUB_ENV
+
+      - name: Download Third-Party IPKs from File
+        run: |
+          if [ ! -f "custom_packages.txt" ]; then
+            echo "⚠️ Warning: custom_packages.txt not found, skipping."
+            echo "CUSTOM_PKGS=" >> \$GITHUB_ENV
+            exit 0
+          fi
+
+          cd openwrt-ib/packages
+          grep -v '^#' ../../custom_packages.txt | grep -v '^\$' | while read -r url; do
+            echo "📥 Downloading third-party IPK: \$url"
+            wget -q "\$url"
+          done
+          
+          CUSTOM_PKGS=""
+          for file in *.ipk; do
+            if [ -f "\$file" ]; then
+              pkg_name=(echo "file" | cut -d'_' -f1)
+              CUSTOM_PKGS="\(CUSTOM_PKGS\)pkg_name"
+            fi
+          done
+          
+          echo "📦 Extracted Custom Packages: \$CUSTOM_PKGS"
+          echo "CUSTOM_PKGS=\(CUSTOM_PKGS" >> \)GITHUB_ENV
+
+      - name: Execute Custom Modify Script
+        run: |
+          if [ -f "modify.sh" ]; then
+            echo "🏃 发现修改脚本，赋予执行权限并运行..."
+            chmod +x modify.sh
+            cp modify.sh openwrt-ib/
+            cd openwrt-ib
+            ./modify.sh
+            rm modify.sh
+          else
+            echo "ℹ️ 未发现 modify.sh 脚本，跳过自定义修改步骤。"
+          fi
+
+      - name: Prepare Custom Files
+        run: |
+          if [ -d "files" ]; then
+            echo "📂 Custom files directory found."
+            echo "IB_FILES_PARAM=FILES=(pwd)/files" >> GITHUB_ENV
+          else
+            echo "ℹ️ No custom files directory found, skipping file integration."
+            echo "IB_FILES_PARAM=" >> \$GITHUB_ENV
+          fi
+
+      - name: Generate Firmware Image
+        run: |
+          cd openwrt-ib
+          FINAL_PKGS="luci-base luci-compat \({{ env.OFFICIAL_PKGS }}\){{ env.CUSTOM_PKGS }}"
+          make image PROFILE="generic" PACKAGES="\(FINAL_PKGS" \){{ env.IB_FILES_PARAM }}
+
+      - name: Organize Files and Extract Version
+        run: |
+          mkdir -p ./artifact
+          
+          # 1. 动态提取 iStoreOS 官方版本号
+          ISTOREOS_VERSION=\$(grep "CONFIG_VERSION_NUMBER=" openwrt-ib/.config | cut -d'"' -f2)
+          BUILD_DATE=\$(date +%Y%m%d)
+          
+          # 2. 将版本号与日期存入全局环境变量，供后续 Release 步骤调用
+          echo "FIRMWARE_VERSION=\({ISTOREOS_VERSION}" >> \)GITHUB_ENV
+          echo "BUILD_TAG=\${ISTOREOS_VERSION}-\({BUILD_DATE}" >> \)GITHUB_ENV
+          
+          # 3. 收集固件并优雅地重命名
+          find openwrt-ib/bin/targets/ -type f  -name "*sysupgrade*" -o -name "*combined*"  | while read -r file; do
+            filename=(basename "file")
+            # 过滤掉中间生成的无用符号文件
+            if [[ "\$filename" != *"vmlinux"* ]]; then
+              custom_name="iStoreOS-\({ISTOREOS_VERSION}-x86_64-\){filename}"
+              cp "file" "./artifact/{custom_name}"
+              echo "📄 Saved artifact as: \${custom_name}"
+            fi
+          done
+          
+          # 4. 生成编译日志说明
+          echo "### 固件定制信息" > ./artifact/release_notes.md
+          echo "* **iStoreOS 基准版本**: \${ISTOREOS_VERSION}" >> ./artifact/release_notes.md
+          echo "* **编译日期**: \$(date '+%Y-%m-%d %H:%M:%S')" >> ./artifact/release_notes.md
+          echo "* **集成的自定义插件**: " >> ./artifact/release_notes.md
+          echo "\`\`\`" >> ./artifact/release_notes.md
+          echo "${{ env.CUSTOM_PKGS }}" | tr ' ' '\n' >> ./artifact/release_notes.md
+          echo "\`\`\`" >> ./artifact/release_notes.md
+
+      - name: Upload to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: \${{ env.BUILD_TAG }}
+          name: iStoreOS 固件定制版 [\${{ env.FIRMWARE_VERSION }}]
+          body_path: ./artifact/release_notes.md
+          files: ./artifact/iStoreOS-*
+          token: \${{ secrets.GITHUB_TOKEN }}
+
+      - name: Clean Up Old Workflow Runs
+        uses: Mattraks/delete-workflow-runs@v2
+        with:
+          token: \${{ secrets.GITHUB_TOKEN }}
+          repository: \${{ github.repository }}
+          retain_days: 0          # 不保留过往历史的天数（可根据需要设为 1 或 3）
+          keep_minimum_runs: 1    # 仅保留最近成功的 1 次运行记录，其余全部自动删除
