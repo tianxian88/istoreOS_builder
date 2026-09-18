@@ -216,7 +216,7 @@ jobs:
           # 2. 使用 gh 命令一键优雅创建 Release 并全量上传重命名后的固件
           gh release create "${{ env.BUILD_TAG }}" \
             ./artifact/iStoreOS-* \
-            --title "iStoreOS 固件定制版 [${{ env.FIRMWARE_VERSION }}]" \
+            --title "iStoreOS  [${{ env.FIRMWARE_VERSION }}]" \
             --notes-file ./artifact/release_notes.md
           
           echo "🎉 固件已发布到 GitHub Releases 页面！"
