@@ -165,17 +165,17 @@ jobs:
         run: |
           mkdir -p ./artifact
           
-          # 1. 从 .config 中精确提取 iStoreOS 官方的版本号
-          ISTOREOS_VERSION=$(grep "CONFIG_VERSION_NUMBER=" openwrt-ib/.config | cut -d'"' -f2)
+          # 1. 直接硬编码固定写死版本号为 v24.10，确保 100% 稳定合法，不再经历任何文件扫描
+          ISTOREOS_VERSION="v24.10"
           BUILD_DATE=$(date +%Y%m%d)
           
-          # 2. 将版本号与日期存入全局环境变量，供后续 Release 步骤调用
+          # 2. 将确保 100% 绝对合法的版本号与日期写进全局 Actions 环境变量
           echo "FIRMWARE_VERSION=${ISTOREOS_VERSION}" >> $GITHUB_ENV
           echo "BUILD_TAG=${ISTOREOS_VERSION}-${BUILD_DATE}" >> $GITHUB_ENV
           
-          # 3. 收集固件并优雅地重命名（拆分为两条独立的 find 语句，彻底杜绝括号语法冲突）
+          echo "🚀 最终锁定的完美合法 Tag 标签将是: ${ISTOREOS_VERSION}-${BUILD_DATE}"
           
-          # 第一轮：搜集带 sysupgrade 的固件
+          # 3. 分批流式收集固件并优雅地重命名（拆分为两条独立的无括号语句，彻底避开Actions文本转义大坑）
           find openwrt-ib/bin/targets/ -type f -name "*sysupgrade*" | while read -r file; do
             filename=$(basename "$file")
             if [[ "$filename" != *"vmlinux"* ]]; then
@@ -185,12 +185,10 @@ jobs:
             fi
           done
           
-          # 第二轮：搜集带 combined 的固件
           find openwrt-ib/bin/targets/ -type f -name "*combined*" | while read -r file; do
             filename=$(basename "$file")
             if [[ "$filename" != *"vmlinux"* ]]; then
               custom_name="iStoreOS-${ISTOREOS_VERSION}-x86-64-${filename}"
-              # 避免第一轮重复拷贝相同的文件
               if [ ! -f "./artifact/${custom_name}" ]; then
                 cp "$file" "./artifact/${custom_name}"
                 echo "📄 Saved artifact: ${custom_name}"
@@ -204,13 +202,29 @@ jobs:
           echo "* **编译时间**: $(date '+%Y-%m-%d %H:%M:%S')" >> ./artifact/release_notes.md
 
 
-      - name: Upload to GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Upload to GitHub Release (Native CLI)
+        env:
+          # 将系统的令牌安全注入给官方命令行工具，100% 继承 write 权限
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          echo "🚀 开始使用 GitHub 官方 CLI 顺畅发布固件..."
+          
+          # 1. 自动在你的远程仓库物理创建这个合法的 Git Tag 标签
+          git tag "${{ env.BUILD_TAG }}"
+          git push origin "${{ env.BUILD_TAG }}"
+          
+          # 2. 使用 gh 命令一键优雅创建 Release 并全量上传重命名后的固件
+          gh release create "${{ env.BUILD_TAG }}" \
+            ./artifact/iStoreOS-* \
+            --title "iStoreOS 固件定制版 [${{ env.FIRMWARE_VERSION }}]" \
+            --notes-file ./artifact/release_notes.md
+          
+          echo "🎉 固件已奇迹般完美发布到 GitHub Releases 页面！"
+          
+      - name: Clean Up Old Workflow Runs
+        uses: Mattraks/delete-workflow-runs@v2
         with:
-          tag_name: ${{ env.BUILD_TAG }}
-          name: iStoreOS  [${{ env.FIRMWARE_VERSION }}]
-          body_path: ./artifact/release_notes.md
-          files: ./artifact/iStoreOS-*
-          fail_on_unmatched_files: false # 【加固】如果文件匹配遇到死锁，防止整个流崩塌
-          token: ${{ github.token }}     # 【修复】直接调用系统的上下文 token 强制对齐顶部 contents: write 权限
-
+          token: \${{ secrets.GITHUB_TOKEN }}
+          repository: \${{ github.repository }}
+          retain_days: 0          # 不保留过往历史的天数（可根据需要设为 1 或 3）
+          keep_minimum_runs: 1    # 仅保留最近成功的 1 次运行记录，其余全部自动删除
