@@ -74,23 +74,27 @@ jobs:
             exit 0
           fi
 
-          cd openwrt-ib/packages
+          # 先在当前目录创建并记录绝对路径，避免 cd 后找不到相对路径
+          PKG_DIR="$(pwd)/openwrt-ib/packages"
+          mkdir -p "$PKG_DIR"
           
           # 用于记录最终需要打包的自定义包名集合
           CUSTOM_PKGS=""
           count=0
           
-          # 读取链接文件：过滤掉注释行(#)和空行
-          grep -v '^#' ../../custom_packages.txt | grep -v '^$' | while read -r line; do
-            count=$((count+1))
+          # 严格读取文本，防止子 Shell 导致的环境变量丢失
+          while read -r line || [ -n "$line" ]; do
+            # 过滤掉注释行和空行
+            [[ "$line" =~ ^# ]] && continue
+            [[ -z "$line" ]] && continue
             
-            # 初始化变量
+            count=$((count+1))
             custom_prefix=""
             url=""
             
-            # 智能解析：判断这一行是否包含自定义名称（支持逗号或分号分隔）
+            # 智能解析：支持逗号或分号分隔（修正单字符分隔符规则）
             if [[ "$line" == *","* ]]; then
-              custom_prefix=$(echo "$line" | cut -d', ' -f1 | tr -d ' ')
+              custom_prefix=$(echo "$line" | cut -d',' -f1 | tr -d ' ')
               url=$(echo "$line" | cut -d',' -f2- | tr -d ' ')
             elif [[ "$line" == *";"* ]]; then
               custom_prefix=$(echo "$line" | cut -d';' -f1 | tr -d ' ')
@@ -108,7 +112,6 @@ jobs:
             
             # 核心逻辑：判断原文件名是否是压缩包
             if [[ "$lower_orig_filename" == *".tar.gz" ]] || [[ "$lower_orig_filename" == *".tgz" ]]; then
-              # 如果是压缩包，启用防冲突重命名机制
               if [ -n "$custom_prefix" ]; then
                 download_filename="${custom_prefix}_${orig_filename}"
               else
@@ -116,32 +119,34 @@ jobs:
               fi
               is_tarball=true
             else
-              # 如果是普通的 .ipk 文件，保持原文件名不进行重命名
               download_filename="$orig_filename"
               is_tarball=false
             fi
             
-            # 执行下载
-            wget -qO "$download_filename" "$url"
+            # 执行下载到指定的目标 packages 目录中
+            wget -qO "$PKG_DIR/$download_filename" "$url"
             
-            if [ ! -s "$download_filename" ]; then
+            if [ ! -s "$PKG_DIR/$download_filename" ]; then
               echo "❌ Error: Failed to download $url"
-              rm -f "$download_filename"
+              rm -f "$PKG_DIR/$download_filename"
               continue
             fi
 
-            # 如果是压缩包，下载完后立即执行解压并清理原压缩包
+            # 如果是压缩包，下载完后立即执行解压到 packages 目录并清理原压缩包
             if [ "$is_tarball" = true ]; then
               echo "📦 Extracting tarball: $download_filename"
-              tar -zxf "$download_filename"
-              rm -f "$download_filename"
+              tar -zxf "$PKG_DIR/$download_filename" -C "$PKG_DIR"
+              rm -f "$PKG_DIR/$download_filename"
             fi
-          done
+          done < custom_packages.txt
+          
+          # 切换到 packages 目录执行扁平化和包名提取
+          cd "$PKG_DIR"
           
           # 【扁平化处理】如果压缩包解压出了嵌套文件夹，把深层目录下的 .ipk 全部移动到当前根目录下
           find . -mindepth 2 -name "*.ipk" -exec mv {} . \;
           
-          # 动态扫描当前 packages 目录下所有实际存在的 .ipk 文件，精准提取包名
+          # 动态扫描当前所有实际存在的 .ipk 文件，精准提取包名
           for file in *.ipk; do
             if [ -f "$file" ]; then
               pkg_name=$(echo "$file" | cut -d'_' -f1)
@@ -154,7 +159,6 @@ jobs:
           
           echo "📦 Final Extracted Custom Packages: $CUSTOM_PKGS"
           echo "CUSTOM_PKGS=$CUSTOM_PKGS" >> $GITHUB_ENV
-
 
       - name: Execute Custom Modify Script
         run: |
