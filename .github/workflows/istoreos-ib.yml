@@ -145,18 +145,19 @@ jobs:
         run: |
           cd openwrt-ib
           
-          # 组合最终包名
-          FINAL_PKGS="luci-base luci-compat \(OFFICIAL_PKGS\)CUSTOM_PKGS"
-          echo "🚀 Final packages list passing to make image: \$FINAL_PKGS"
+          # 1. 组合最终包名
+          FINAL_PKGS="luci-base luci-compat $OFFICIAL_PKGS $CUSTOM_PKGS"
+          echo "🚀 Final packages list passing to make image: $FINAL_PKGS"
           
-          # 判断是否存在自定义文件目录，动态决定是否附加 FILES= 参数
-          if [ -n "\${{ env.CUSTOM_FILES_PATH }}" ]; then
-            echo "🛠️ Injecting custom files from: \${{ env.CUSTOM_FILES_PATH }}"
-            make image PROFILE="generic" PACKAGES="\(FINAL_PKGS" FILES="\){{ env.CUSTOM_FILES_PATH }}"
+          # 2. 安全加引号防御空变量，动态决定是否注入 FILES 参数
+          if [ -n "${{ env.CUSTOM_FILES_PATH }}" ]; then
+            echo "🛠️ Injecting custom files from: ${{ env.CUSTOM_FILES_PATH }}"
+            make image PROFILE="generic" PACKAGES="$FINAL_PKGS" FILES="${{ env.CUSTOM_FILES_PATH }}"
           else
             echo "ℹ️ Building standard image without extra files."
-            make image PROFILE="generic" PACKAGES="\$FINAL_PKGS"
+            make image PROFILE="generic" PACKAGES="$FINAL_PKGS"
           fi
+
 
       - name: Organize Files and Extract Version
         run: |
