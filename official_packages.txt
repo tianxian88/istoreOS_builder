@@ -3,7 +3,6 @@
 # ========================================================
 
 # 基础与常用插件
-luci-i18n-base-zh-cn
 adb
 adb-enablemodem
 amdgpu-firmware
