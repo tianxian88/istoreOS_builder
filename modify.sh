@@ -3,6 +3,10 @@
 # 固件编译前定制脚本（支持自定义修改、预下载数据库与内核等）
 # 注意：此时当前工作目录（PWD）是在 openwrt-ib 目录下
 # ========================================================
+# Force opkg to overwrite files
+sed -i "s/install \$(BUILD_PACKAGES)/install \$(BUILD_PACKAGES) --force-overwrite/" Makefile
+# 修改分区大小
+sed -i "s/CONFIG_TARGET_ROOTFS_PARTSIZE=.*/CONFIG_TARGET_ROOTFS_PARTSIZE=1024/" .config
 
 echo "🔧 正在执行自定义高级预处理脚本..."
 
