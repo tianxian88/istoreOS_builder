@@ -3,10 +3,6 @@
 # ========================================================
 iptables
 ca-bundle
-iptables-mod-tproxy
-iptables-mod-extra
-ruby
-ruby-yaml
 zram-swap
 # 基础与常用插件
 adb
