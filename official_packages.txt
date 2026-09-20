@@ -1,7 +1,13 @@
 # ========================================================
 # 需要集成的官方源/内置包名列表 (每行一个，支持 # 注释)
 # ========================================================
-
+iptables
+ca-bundle
+iptables-mod-tproxy
+iptables-mod-extra
+ruby
+ruby-yaml
+zram-swap
 # 基础与常用插件
 adb
 adb-enablemodem
@@ -769,8 +775,6 @@ luci-app-ttyd
 luci-app-unishare
 luci-app-upnp
 luci-app-wol
-luci-base
-luci-compat
 luci-i18n-argon-config-zh-cn
 luci-i18n-argon-zh-cn
 luci-i18n-base-zh-cn
@@ -1020,6 +1024,6 @@ xtables-nft
 xz
 xz-utils
 zlib
-zram-swap
+
 # 如果需要移除某个固件默认自带的包，可以用负号，例如：
 # -luci-app-example
