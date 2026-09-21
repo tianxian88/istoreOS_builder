@@ -1,13 +1,6 @@
 # ========================================================
 # 需要集成的官方源/内置包名列表 (每行一个，支持 # 注释)
 # ========================================================
-#移除docker
--dockerd
--docker
--containerd
--docker-compose
--luci-app-dockerman
--luci-i18n-dockerman-zh-cn
 # openclash依赖
 iptables
 ca-bundle
@@ -16,7 +9,6 @@ zram-swap
 adb
 adb-enablemodem
 amdgpu-firmware
-appfilter
 attr
 avahi-dbus-daemon
 avahi-utils
@@ -36,7 +28,6 @@ cifsmount
 comgt
 comgt-directip
 comgt-ncm
-containerd
 coreutils
 coreutils-stat
 coreutils-stty
@@ -50,9 +41,6 @@ ddns-scripts-services
 ddns-scripts_aliyun
 dkml
 dnsmasq-full
-docker
-docker-compose
-dockerd
 ds-lite
 e100-firmware
 e2fsprogs
@@ -786,7 +774,6 @@ luci-i18n-cifs-mount-zh-cn
 luci-i18n-cpufreq-zh-cn
 luci-i18n-ddns-zh-cn
 luci-i18n-diskman-zh-cn
-luci-i18n-dockerman-zh-cn
 luci-i18n-fan-zh-cn
 luci-i18n-filetransfer-zh-cn
 luci-i18n-firewall-zh-cn
