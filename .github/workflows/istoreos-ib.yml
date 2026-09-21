@@ -90,11 +90,6 @@ jobs:
             count=$((count+1))
             echo "🎯 [第 ${count} 步] 直接读取包名: [$pkg_name] | 发起原生下载..."
             
-            # 1. 将精确拿到的包名直接追加到全局编译列表中（去重收录）
-            if [[ ! " $CUSTOM_PKGS " == *" $pkg_name "* ]]; then
-              CUSTOM_PKGS="$CUSTOM_PKGS $pkg_name"
-            fi
-            
             # 2. 切换到 packages 目录，直接以网络原名下载
             cd "$PKG_DIR"
             wget -q "$url"
@@ -114,6 +109,26 @@ jobs:
           # 4. 所有网络流式下载与解压全部完成后，统一处理可能存在的嵌套文件夹即可
           cd "$PKG_DIR"
           find . -mindepth 2 -name "*.ipk" -exec mv {} . \;
+          # 直接从所有 ipk 的控制文件中，100% 精确提取真实包名
+          echo "🔍 正在从所有 .ipk 文件中精确提取软件包真实名称..."
+          CUSTOM_PKGS=""
+          pkg_name=""
+          for ipk in *.ipk; do
+            [ -e "$ipk" ] || continue
+            # 从 ipk 内部的 control.tar.gz 中直接提取 Package 字段，这是最权威、绝对不会错的包名
+            pkg_name=$(tar -zOf "$ipk" control.tar.gz ./control 2>/dev/null | grep '^Package:' | awk '{print $2}')
+            
+            # 如果上面由于 tar 版本问题没提取到，则采用备用方案：用文件名下划线切分
+            if [ -z "$pkg_name" ]; then
+              pkg_name=$(echo "$ipk" | cut -d'_' -f1)
+            fi
+            
+            # 去重加入集合
+            if [[ ! " $CUSTOM_PKGS " == *" $pkg_name "* ]]; then
+              CUSTOM_PKGS="$CUSTOM_PKGS $pkg_name"
+              echo "✅ 已自动收录软件包: $pkg_name"
+            fi
+          done
           
           echo "📦 Final Extracted Custom Packages: $CUSTOM_PKGS"
           echo "CUSTOM_PKGS=$CUSTOM_PKGS" >> $GITHUB_ENV
