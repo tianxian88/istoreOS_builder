@@ -16,7 +16,7 @@
 iptables
 ca-bundle
 zram-swap
-# 基础与常用插件
+# 基础与常用插件,抓的官方固件包列表补的。
 adb
 adb-enablemodem
 amdgpu-firmware
@@ -768,7 +768,6 @@ luci-app-firewall
 luci-app-hd-idle
 luci-app-mergerfs
 luci-app-nfs
-luci-app-oaf
 luci-app-ota
 luci-app-package-manager
 luci-app-quickstart
@@ -791,7 +790,6 @@ luci-i18n-firewall-zh-cn
 luci-i18n-hd-idle-zh-cn
 luci-i18n-mergerfs-zh-cn
 luci-i18n-nfs-zh-cn
-luci-i18n-oaf-zh-cn
 luci-i18n-ota-zh-cn
 luci-i18n-package-manager-zh-cn
 luci-i18n-quickstart-zh-cn
