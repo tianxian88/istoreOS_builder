@@ -8,6 +8,8 @@
 -docker-compose
 -luci-app-dockerman
 -luci-i18n-dockerman-zh-cn
+#
+-appfilter
 # openclash依赖
 iptables
 ca-bundle
