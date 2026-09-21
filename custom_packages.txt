@@ -11,5 +11,5 @@
 
 # 示例 2：普通的纯链接，依然完美兼容
 #https://github.com
-luci-app-mosdns,https://github.com/tianxian88/luci-app-mosdns/releases/latest/download/x86_64-openwrt-24.10.tar.gz
+luci-i18n-mosdns-zh-cn,https://github.com/tianxian88/luci-app-mosdns/releases/latest/download/x86_64-openwrt-24.10.tar.gz
 #luci-app-openclash,https://github.com/vernesong/OpenClash/releases/download/v0.47.156/luci-app-openclash_0.47.156_all.ipk
