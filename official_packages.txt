@@ -13,8 +13,6 @@
 -luci-app-oaf
 -luci-i18n-oaf-zh-cn
 # openclash依赖
-ruby
-ruby-yaml
 ca-bundle
 zram-swap
 # 基础与常用插件,抓的官方固件包列表补的。
