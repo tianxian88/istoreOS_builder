@@ -89,7 +89,12 @@ jobs:
             
             count=$((count+1))
             echo "🎯 [第 ${count} 步] 直接读取包名: [$pkg_name] | 发起原生下载..."
-                     
+            
+            # 1. 将精确拿到的包名直接追加到全局编译列表中（去重收录）
+            if [[ ! " $CUSTOM_PKGS " == *" $pkg_name "* ]]; then
+              CUSTOM_PKGS="$CUSTOM_PKGS $pkg_name"
+            fi
+            
             # 2. 切换到 packages 目录，直接以网络原名下载
             cd "$PKG_DIR"
             wget -q "$url"
@@ -109,22 +114,8 @@ jobs:
           # 4. 所有网络流式下载与解压全部完成后，统一处理可能存在的嵌套文件夹即可
           cd "$PKG_DIR"
           find . -mindepth 2 -name "*.ipk" -exec mv {} . \;
-          # 5. 🔍 核心集成：从最终生成的 .ipk 文件中提取、累积并去重包名
-          echo "=================================================="
-          echo "🚀 开始从生成的 .ipk 文件中提取、累积并去重包名..."
           
-          RAW_LIST=""
-          for ipk in *.ipk; do
-            [ -e "$ipk" ] || continue
-            # 提取包名（去掉下划线及后面的版本号和架构）
-            extracted_name="${ipk%%_*}"
-            RAW_LIST="$RAW_LIST $extracted_name"
-          done
-          
-          # 文本流去重：空格转换行 -> 排序去重 -> 换行转空格 -> 清理两端空格
-          CUSTOM_PKGS=$(echo "$RAW_LIST" | tr ' ' '\n' | sort -u | tr '\n' ' ' | xargs)
-          
-          echo "✅ 最终去重后的自定义包名列表: $CUSTOM_PKGS"
+          echo "📦 Final Extracted Custom Packages: $CUSTOM_PKGS"
           echo "CUSTOM_PKGS=$CUSTOM_PKGS" >> $GITHUB_ENV
 
 
