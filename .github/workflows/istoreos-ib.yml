@@ -155,10 +155,10 @@ jobs:
           # 2. 安全加引号防御空变量，动态决定是否注入 FILES 参数
           if [ -n "${{ env.CUSTOM_FILES_PATH }}" ]; then
             echo "🛠️ Injecting custom files from: ${{ env.CUSTOM_FILES_PATH }}"
-            make image PROFILE="generic" PACKAGES="$FINAL_PKGS" FILES="${{ env.CUSTOM_FILES_PATH }}"
+            make image PROFILE="generic" PACKAGES="$FINAL_PKGS" FILES="${{ env.CUSTOM_FILES_PATH }}" IGNORE_ERRORS=1
           else
             echo "ℹ️ Building standard image without extra files."
-            make image PROFILE="generic" PACKAGES="$FINAL_PKGS"
+            make image PROFILE="generic" PACKAGES="$FINAL_PKGS" IGNORE_ERRORS=1
           fi
 
 
