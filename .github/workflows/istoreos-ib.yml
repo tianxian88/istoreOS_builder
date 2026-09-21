@@ -73,56 +73,52 @@ jobs:
           PKG_DIR="$(pwd)/openwrt-ib/packages"
           mkdir -p "$PKG_DIR"
           
-          echo "🚀 开始读取 custom_packages.txt 并全量下载..."
+          # 用于记录最终需要打包的自定义包名集合
+          CUSTOM_PKGS=""
+          count=0
           
-          # 第一步：不管三七二十一，先把所有 URL 对应的文件下载并解压到目录中
-          while read -r line || [ -n "$line" ]; do
-            # 过滤注释和空行
-            [[ "$line" =~ ^# ]] && continue
-            [[ -z "$line" ]] && continue
+          # 核心优化：利用 IFS=',' 原生机制自动将每一行拆分为 $pkg_name 和 $url
+          while IFS=',' read -r raw_pkg raw_url || [ -n "$raw_pkg" ]; do
+            # 彻底清洗两边可能存在的隐形空格和回车符
+            pkg_name=$(echo "$raw_pkg" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/\r//g')
+            url=$(echo "$raw_url" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/\r//g')
             
-            # 提取 URL（兼容你带逗号的格式，或者直接整行是 URL 的格式）
-            url=$(echo "$line" | awk -F',' '{print $NF}' | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/\r//g')
+            # 过滤掉注释行和空行（如果整行是注释，pkg_name 会以 # 开头）
+            [[ "$pkg_name" =~ ^# ]] && continue
+            [[ -z "$pkg_name" ]] && continue
             
+            count=$((count+1))
+            echo "🎯 [第 ${count} 步] 直接读取包名: [$pkg_name] | 发起原生下载..."
+            
+            # 1. 将精确拿到的包名直接追加到全局编译列表中（去重收录）
+            if [[ ! " $CUSTOM_PKGS " == *" $pkg_name "* ]]; then
+              CUSTOM_PKGS="$CUSTOM_PKGS $pkg_name"
+            fi
+            
+            # 2. 切换到 packages 目录，直接以网络原名下载
             cd "$PKG_DIR"
-            echo "📥 下载: $url"
             wget -q "$url"
             
-            # 即下即解即删
+            # 3. 即下即解即删：如果是压缩包，立即就地解压并瞬间消灭自身
             if ls *.tar.gz >/dev/null 2>&1 || ls *.tgz >/dev/null 2>&1; then
+              echo "📦 发现压缩包，立即就地解压并删除自身..."
               tar -zxf *.tar.gz 2>/dev/null || tar -zxf *.tgz 2>/dev/null
               rm -f *.tar.gz *.tgz 2>/dev/null
             fi
+            
+            # 回到外层仓库根目录，准备读取下一行
             cd - >/dev/null
+            echo "--------------------------------------------------"
           done < custom_packages.txt
           
-          # 第二步：统一拍平所有目录，把隐藏在深处的 ipk 全部移到 packages 根目录
+          # 4. 所有网络流式下载与解压全部完成后，统一处理可能存在的嵌套文件夹即可
           cd "$PKG_DIR"
           find . -mindepth 2 -name "*.ipk" -exec mv {} . \;
           
-          # 第三步：✨【核心黑魔法】直接从所有 ipk 的控制文件中，100% 精确提取真实包名
-          echo "🔍 正在从所有 .ipk 文件中精确提取软件包真实名称..."
-          CUSTOM_PKGS=""
-          
-          for ipk in *.ipk; do
-            [ -e "$ipk" ] || continue
-            # 从 ipk 内部的 control.tar.gz 中直接提取 Package 字段，这是最权威、绝对不会错的包名
-            pkg_name=$(tar -zOf "$ipk" control.tar.gz ./control 2>/dev/null | grep '^Package:' | awk '{print $2}')
-            
-            # 如果上面由于 tar 版本问题没提取到，则采用备用方案：用文件名下划线切分
-            if [ -z "$pkg_name" ]; then
-              pkg_name=$(echo "$ipk" | cut -d'_' -f1)
-            fi
-            
-            # 去重加入集合
-            if [[ ! " $CUSTOM_PKGS " == *" $pkg_name "* ]]; then
-              CUSTOM_PKGS="$CUSTOM_PKGS $pkg_name"
-              echo "✅ 已自动收录软件包: $pkg_name"
-            fi
-          done
-          
-          echo "📦 所有需要打包的自定义插件集合: $CUSTOM_PKGS"
+          echo "📦 Final Extracted Custom Packages: $CUSTOM_PKGS"
           echo "CUSTOM_PKGS=$CUSTOM_PKGS" >> $GITHUB_ENV
+
+
 
       - name: Execute Custom Modify Script
         run: |
