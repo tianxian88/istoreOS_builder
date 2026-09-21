@@ -12,7 +12,7 @@ echo "🔧 正在执行自定义高级预处理脚本..."
 
 # 此时 PWD 是 openwrt-ib，所以上一层才是仓库根目录
 echo "Current Path: $PWD"
-
+cd ..
 mkdir -p files/etc/openclash && cd files/etc/openclash
 
 # --------------------------------------------------------
