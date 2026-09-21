@@ -10,6 +10,8 @@
 -luci-i18n-dockerman-zh-cn
 #
 -appfilter
+-luci-app-oaf
+-luci-i18n-oaf-zh-cn
 # openclash依赖
 iptables
 ca-bundle
