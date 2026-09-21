@@ -11,13 +11,9 @@ sed -i "s/CONFIG_TARGET_ROOTFS_PARTSIZE=.*/CONFIG_TARGET_ROOTFS_PARTSIZE=1024/" 
 echo "🔧 正在执行自定义高级预处理脚本..."
 
 # 此时 PWD 是 openwrt-ib，所以上一层才是仓库根目录
-REPO_FILES_DIR="../files"
-OPENCLASH_DIR="${REPO_FILES_DIR}/etc/openclash"
-CORE_DIR="${OPENCLASH_DIR}/core"
+echo "Current Path: $PWD"
 
-# 创建所需的本地目录结构
-mkdir -p "${OPENCLASH_DIR}"
-mkdir -p "${CORE_DIR}"
+mkdir -p files/etc/openclash && cd files/etc/openclash
 
 # --------------------------------------------------------
 # 1. 批量下载 OpenClash 所需的 4 个核心数据库文件
@@ -48,6 +44,7 @@ wget -qO "${OPENCLASH_DIR}/GeoLite2-ASN.mmdb" "$URL_ASN"
 # --------------------------------------------------------
 # 2. 下载 Mihomo (Clash Meta) 内核并预置 (单文件格式)
 # --------------------------------------------------------
+mkdir ./core/ && cd ./core/
 echo "📥 正在下载 Mihomo 内核 (单文件格式)..."
 MIHOMO_URL="https://raw.githubusercontent.com/tianxian88/mihomo/refs/heads/main/bin/meta/clash-linux-amd64"
 
