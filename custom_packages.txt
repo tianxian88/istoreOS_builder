@@ -1,15 +1,9 @@
 # ========================================================
 # 第三方 IPK / 压缩包下载列表
 # 格式支持：
-# 1. 纯链接格式：链接
-# 2. 自定义名称格式：自定义包名,链接 (推荐！防止重名冲突)
+#  自定义名称格式：自定义包名,链接 (推荐！防止重名冲突)
 # ========================================================
-
-# 示例 1：两个下载链接名字一样，但通过自定义包名完美隔离
 #luci-app-pluginA,https://github.com
-#luci-app-pluginB,https://github.com
 
-# 示例 2：普通的纯链接，依然完美兼容
-#https://github.com
 luci-i18n-mosdns-zh-cn,https://github.com/tianxian88/luci-app-mosdns/releases/latest/download/x86_64-openwrt-24.10.tar.gz
-#luci-app-openclash,https://github.com/vernesong/OpenClash/releases/download/v0.47.156/luci-app-openclash_0.47.156_all.ipk
+luci-app-openclash,https://github.com/vernesong/OpenClash/releases/download/v0.47.156/luci-app-openclash_0.47.156_all.ipk
