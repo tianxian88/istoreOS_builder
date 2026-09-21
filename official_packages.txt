@@ -13,7 +13,6 @@
 -luci-app-oaf
 -luci-i18n-oaf-zh-cn
 # openclash依赖
-iptables
 ruby
 ruby-yaml
 ca-bundle
