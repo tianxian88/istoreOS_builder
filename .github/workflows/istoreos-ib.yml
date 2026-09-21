@@ -202,22 +202,16 @@ jobs:
           echo "* **编译时间**: $(date '+%Y-%m-%d %H:%M:%S')" >> ./artifact/release_notes.md
 
 
-      - name: Upload to GitHub Release (Native CLI)
-        env:
-          # 将系统的令牌安全注入给官方命令行工具，100% 继承 write 权限
-          GITHUB_TOKEN: ${{ github.token }}
-        run: |
-          echo "🚀 开始使用 GitHub 官方 CLI 发布固件..."
-          
-          # 1. 自动在你的远程仓库物理创建这个合法的 Git Tag 标签
-          git tag "${{ env.BUILD_TAG }}"
-          git push origin "${{ env.BUILD_TAG }}"
-          
-          # 2. 使用 gh 命令一键优雅创建 Release 并全量上传重命名后的固件
-          gh release create "${{ env.BUILD_TAG }}" \
-            ./artifact/iStoreOS-* \
-            --title "iStoreOS  [${{ env.FIRMWARE_VERSION }}]" \
-            --notes-file ./artifact/release_notes.md
+      - name: Upload to GitHub Release
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_token: ${{ secrets.GITHUB_TOKEN }}
+          file: ./artifact/iStoreOS-*          # 支持通配符，全量上传匹配的固件
+          tag: ${{ env.BUILD_TAG }}            # 自动基于此名称创建 Git Tag
+          release_name: "iStoreOS [${{ env.FIRMWARE_VERSION }}]"
+          body: "### iStoreOS 定制固件自动化发布\n* **基准版本**: ${{ env.FIRMWARE_VERSION }}\n* **编译发布成功！**" # 或者是更新日志
+          overwrite: true                       # 如果 Tag 已存在，覆盖同名文件
+          file_glob: true                       # 必须开启，否则无法识别通配符 *
           
           echo "🎉 固件已发布到 GitHub Releases 页面！"
           
