@@ -1,6 +1,14 @@
 # ========================================================
 # 需要集成的官方源/内置包名列表 (每行一个，支持 # 注释)
 # ========================================================
+#移除docker
+-dockerd
+-docker
+-containerd
+-docker-compose
+-luci-app-dockerman
+-luci-i18n-dockerman-zh-cn
+# openclash依赖
 iptables
 ca-bundle
 zram-swap
