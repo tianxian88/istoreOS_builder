@@ -213,8 +213,6 @@ jobs:
           overwrite: true                       # 如果 Tag 已存在，覆盖同名文件
           file_glob: true                       # 必须开启，否则无法识别通配符 *
           
-          echo "🎉 固件已发布到 GitHub Releases 页面！"
-          
       - name: Clean Up Old Workflow Runs
         uses: Mattraks/delete-workflow-runs@v2
         with:
