@@ -137,11 +137,12 @@ jobs:
         run: |
           if [ -d "files" ]; then
             echo "📂 Custom files directory found."
-            echo "CUSTOM_FILES_PATH=\((pwd)/files" >> \)GITHUB_ENV
+            echo "CUSTOM_FILES_PATH=$(pwd)/files" >> $GITHUB_ENV
           else
             echo "ℹ️ No custom files directory found."
-            echo "CUSTOM_FILES_PATH=" >> \$GITHUB_ENV
+            echo "CUSTOM_FILES_PATH=" >> $GITHUB_ENV
           fi
+
 
       - name: Generate Firmware Image
         run: |
