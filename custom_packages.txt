@@ -2,8 +2,7 @@
 # 第三方 IPK
 #  自定义名称格式：自定义包名,链接 (推荐！防止重名冲突)
 # ========================================================
-
-
+#mosdns
 luci-i18n-mosdns-zh-cn,https://github.com/tianxian88/luci-app-mosdns/releases/latest/download/x86_64-openwrt-24.10.tar.gz
 #openclash
 luci-app-openclash,https://github.com/vernesong/OpenClash/releases/download/v0.47.156/luci-app-openclash_0.47.156_all.ipk
