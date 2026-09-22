@@ -71,6 +71,7 @@ jobs:
 
           # 物理锁定唯一的存放和解压目录
           PKG_DIR="$(pwd)/openwrt-ib/packages"
+          rm -rf "$PKG_DIR"
           mkdir -p "$PKG_DIR"
           
           # 用于记录最终需要打包的自定义包名集合
