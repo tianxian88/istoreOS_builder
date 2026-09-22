@@ -1,4 +1,4 @@
-name: Build iStoreOS 24.10 Custom Firmware
+name: Build iStoreOS x86_64 24.10 Custom Firmware
 
 on:
   workflow_dispatch: # 支持手动触发编译
@@ -14,6 +14,7 @@ on:
 env:
   # iStoreOS 24.10 (x86_64) ImageBuilder 官方下载地址
   IB_URL: https://fw20.koolcenter.com/iStoreOS/ib/24.10/x86_64/istoreos-imagebuilder-x86-64.Linux-x86_64.tar.zst
+
 jobs:
   build:
     runs-on: ubuntu-22.04
@@ -60,7 +61,6 @@ jobs:
           echo "📦 Loaded Official Packages: $OFFICIAL_PKGS"
           echo "OFFICIAL_PKGS=$OFFICIAL_PKGS" >> $GITHUB_ENV
 
-
       - name: Download Third-Party IPKs from File
         run: |
           if [ ! -f "custom_packages.txt" ]; then
@@ -83,7 +83,7 @@ jobs:
             pkg_name=$(echo "$raw_pkg" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/\r//g')
             url=$(echo "$raw_url" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//' -e 's/\r//g')
             
-            # 过滤掉注释行和空行（如果整行是注释，pkg_name 会以 # 开头）
+            # 过滤掉注释行和空行
             [[ "$pkg_name" =~ ^# ]] && continue
             [[ -z "$pkg_name" ]] && continue
             
@@ -95,58 +95,48 @@ jobs:
               CUSTOM_PKGS="$CUSTOM_PKGS $pkg_name"
             fi
             
-            # 2. 切换到 packages 目录，直接以网络原名下载
-            cd "$PKG_DIR"
-            wget -q "$url"
+            # 2. 直接下载到指定目录，省去频繁 cd 切换目录的麻烦
+            wget -q "$url" -P "$PKG_DIR"
             
-
-            # 3. 即下即解即删：如果是压缩包，立即就地解压并瞬间消灭自身
+            # 3. 针对刚下载的压缩包进行解压处理
             shopt -s nullglob
-
-            for archive in *.tar.gz *.tgz *.tar.xz *.zip; do
-             echo "📦 发现压缩包 [$archive]，立即就地解压并删除自身..."
-  
-             case "$archive" in
-               *.tar.gz|*.tgz)
-                tar -xzf "$archive"
-              ;;
-              *.tar.xz)
-               tar -xJf "$archive"
-              ;;
-              *.zip)
-             unzip -qo "$archive"
-              ;;
-            esac
-  
+            for archive in "$PKG_DIR"/*.tar.gz "$PKG_DIR"/*.tgz "$PKG_DIR"/*.tar.xz "$PKG_DIR"/*.zip; do
+              echo "📦 发现压缩包 [$(basename "$archive")]，立即就地解压并删除自身..."
+              
+              case "$archive" in
+                *.tar.gz|*.tgz)
+                  tar -xzf "$archive" -C "$PKG_DIR"
+                  ;;
+                *.tar.xz)
+                  tar -xJf "$archive" -C "$PKG_DIR"
+                  ;;
+                *.zip)
+                  unzip -qo "$archive" -d "$PKG_DIR"
+                  ;;
+              esac
+              
               # 解压成功后立即删除原文件
-             rm -f "$archive"
+              rm -f "$archive"
             done
-
-           # 关闭 nullglob 恢复默认行为
             shopt -u nullglob
 
-
-            
-            # 回到外层仓库根目录，准备读取下一行
-            cd - >/dev/null
             echo "--------------------------------------------------"
           done < custom_packages.txt
           
-          # 4. 所有网络流式下载与解压全部完成后，统一处理可能存在的嵌套文件夹即可
+          # 4. 所有网络流式下载与解压全部完成后，统一处理可能存在的嵌套文件夹
           cd "$PKG_DIR"
           find . -mindepth 2 -name "*.ipk" -exec mv {} . \;
           
           echo "📦 Final Extracted Custom Packages: $CUSTOM_PKGS"
           echo "CUSTOM_PKGS=$CUSTOM_PKGS" >> $GITHUB_ENV
 
-
-
       - name: Execute Custom Modify Script
         run: |
           if [ -f "modify.sh" ]; then
             echo "🏃 发现修改脚本，赋予执行权限并运行..."
             chmod +x modify.sh
-            cp X86/repositories.conf openwrt-ib/
+            # 确保 X86 目录存在，避免 cp 报错
+            if [ -d "X86" ]; then cp X86/repositories.conf openwrt-ib/ || true; fi
             cp modify.sh openwrt-ib/
             cd openwrt-ib
             ./modify.sh
@@ -165,7 +155,6 @@ jobs:
             echo "CUSTOM_FILES_PATH=" >> $GITHUB_ENV
           fi
 
-
       - name: Generate Firmware Image
         run: |
           cd openwrt-ib
@@ -183,7 +172,6 @@ jobs:
             make image PROFILE="generic" PACKAGES="$FINAL_PKGS" IGNORE_ERRORS=1
           fi
 
-
       - name: Organize Files and Extract Version
         run: |
           mkdir -p ./artifact
@@ -196,7 +184,7 @@ jobs:
           echo "FIRMWARE_VERSION=${ISTOREOS_VERSION}" >> $GITHUB_ENV
           echo "BUILD_TAG=${ISTOREOS_VERSION}-${BUILD_DATE}" >> $GITHUB_ENV
           
-          echo "🚀  Tag 标签将是: ${ISTOREOS_VERSION}-${BUILD_DATE}"
+          echo "🚀 Tag 标签将是: ${ISTOREOS_VERSION}-${BUILD_DATE}"
           
           # 3. 重命名
           find openwrt-ib/bin/targets/ -type f -name "*sysupgrade*" | while read -r file; do
@@ -224,7 +212,6 @@ jobs:
           echo "* **基准版本**: ${ISTOREOS_VERSION}" >> ./artifact/release_notes.md
           echo "* **编译时间**: $(date '+%Y-%m-%d %H:%M:%S')" >> ./artifact/release_notes.md
 
-
       - name: Upload to GitHub Release
         uses: svenstaro/upload-release-action@v2
         with:
@@ -232,9 +219,9 @@ jobs:
           file: ./artifact/iStoreOS-*          # 支持通配符，全量上传匹配的固件
           tag: ${{ env.BUILD_TAG }}            # 自动基于此名称创建 Git Tag
           release_name: "iStoreOS [${{ env.FIRMWARE_VERSION }}]"
-          body: "### iStoreOS 定制固件自动化发布\n* **基准版本**: ${{ env.FIRMWARE_VERSION }}\n* **编译发布成功！**" # 或者是更新日志
-          overwrite: true                       # 如果 Tag 已存在，覆盖同名文件
-          file_glob: true                       # 必须开启，否则无法识别通配符 *
+          body: "### iStoreOS 定制固件自动化发布\n* **基准版本**: ${{ env.FIRMWARE_VERSION }}\n* **编译发布成功！**"
+          overwrite: true                      # 如果 Tag 已存在，覆盖同名文件
+          file_glob: true                      # 必须开启，否则无法识别通配符 *
           
       - name: Clean Up Old Workflow Runs
         uses: Mattraks/delete-workflow-runs@v2
@@ -242,7 +229,4 @@ jobs:
           token: ${{ github.token }}     
           repository: ${{ github.repository }} 
           retain_days: 0          # 不保留过往历史的天数
-          keep_minimum_runs: 1    # 仅保留最近成功的这 1 次运行记录，其余全自动擦除
-
-
-  
+          keep_minimum_runs: 1    # 仅保留最近成功的这 1 次运行记录
