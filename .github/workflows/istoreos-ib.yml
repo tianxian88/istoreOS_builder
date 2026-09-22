@@ -101,20 +101,29 @@ jobs:
             
 
             # 3. 即下即解即删：如果是压缩包，立即就地解压并瞬间消灭自身
-            if ls *.tar.gz >/dev/null 2>&1 || ls *.tgz >/dev/null 2>&1 || ls *.tar.xz >/dev/null 2>&1 || ls *.zip >/dev/null 2>&1; then
-              echo "📦 发现压缩包，立即就地解压并删除自身..."
-              
-              # 解压 tar 格式 (.tar.gz / .tgz / .tar.xz)
-              tar -xf *.tar.gz 2>/dev/null || tar -xf *.tgz 2>/dev/null || tar -xf *.tar.xz 2>/dev/null
-              
-              # 解压 zip 格式 (使用 -q 参数静默解压，-o 参数覆盖同名文件，可根据需要调整)
-              if ls *.zip >/dev/null 2>&1; then
-                unzip -qo *.zip 2>/dev/null
-              fi
-              
-              # 瞬间消灭所有压缩包自身
-              rm -f *.tar.gz *.tgz *.tar.xz *.zip 2>/dev/null
-            fi
+            shopt -s nullglob
+
+            for archive in *.tar.gz *.tgz *.tar.xz *.zip; do
+             echo "📦 发现压缩包 [$archive]，立即就地解压并删除自身..."
+  
+             case "$archive" in
+               *.tar.gz|*.tgz)
+                tar -xzf "$archive"
+              ;;
+              *.tar.xz)
+               tar -xJf "$archive"
+              ;;
+              *.zip)
+             unzip -qo "$archive"
+              ;;
+            esac
+  
+              # 解压成功后立即删除原文件
+             rm -f "$archive"
+            done
+
+           # 关闭 nullglob 恢复默认行为
+            shopt -u nullglob
 
 
             
