@@ -1,6 +1,8 @@
 # ========================================================
 # 需要集成的官方源/内置包名列表 (每行一个，支持 # 注释)
 # ========================================================
+# 如果需要移除某个固件默认自带的包，可以用负号，例如：
+# -luci-app-example
 #移除docker
 -dockerd
 -docker
@@ -756,27 +758,7 @@ lsblk
 lscpu
 lua
 luci
-luci-app-argon-config
-luci-app-cifs-mount
-luci-app-cpufreq
-luci-app-ddns
-luci-app-diskman
-luci-app-dockerman
-luci-app-fan
-luci-app-filetransfer
-luci-app-firewall
-luci-app-hd-idle
-luci-app-mergerfs
-luci-app-nfs
-luci-app-ota
-luci-app-package-manager
-luci-app-quickstart
-luci-app-samba4
 luci-app-store
-luci-app-ttyd
-luci-app-unishare
-luci-app-upnp
-luci-app-wol
 luci-i18n-argon-config-zh-cn
 luci-i18n-argon-zh-cn
 luci-i18n-base-zh-cn
@@ -799,7 +781,6 @@ luci-i18n-unishare-zh-cn
 luci-i18n-upnp-zh-cn
 luci-i18n-wol-zh-cn
 luci-lib-base
-luci-lib-docker
 luci-lib-fs
 luci-lib-ip
 luci-lib-ipkg
@@ -831,7 +812,6 @@ luci-proto-unet
 luci-proto-wireguard
 luci-ssl
 luci-theme-argon
-luci-theme-bootstrap
 map
 mdadm
 mergerfs
@@ -1024,6 +1004,3 @@ xtables-nft
 xz
 xz-utils
 zlib
-
-# 如果需要移除某个固件默认自带的包，可以用负号，例如：
-# -luci-app-example
