@@ -1,9 +1,8 @@
 # ========================================================
-# 第三方 IPK / 压缩包下载列表
-# 格式支持：
+# 第三方 IPK
 #  自定义名称格式：自定义包名,链接 (推荐！防止重名冲突)
 # ========================================================
-#luci-app-pluginA,https://github.com
+
 
 luci-i18n-mosdns-zh-cn,https://github.com/tianxian88/luci-app-mosdns/releases/latest/download/x86_64-openwrt-24.10.tar.gz
 #openclash
