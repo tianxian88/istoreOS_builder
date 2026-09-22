@@ -7,7 +7,5 @@
 
 luci-i18n-mosdns-zh-cn,https://github.com/tianxian88/luci-app-mosdns/releases/latest/download/x86_64-openwrt-24.10.tar.gz
 #openclash
-ruby,https://downloads.openwrt.org/releases/24.10.8/packages/x86_64/packages/ruby_3.3.10-r1_x86_64.ipk
-ruby-yaml,https://downloads.openwrt.org/releases/24.10.8/packages/x86_64/packages/ruby-yaml_3.3.10-r1_x86_64.ipk
 luci-app-openclash,https://github.com/vernesong/OpenClash/releases/download/v0.47.156/luci-app-openclash_0.47.156_all.ipk
 luci-i18n-easytier-zh-cn,https://github.com/EasyTier/luci-app-easytier/releases/download/v2.6.4/EasyTier-v2.6.4-x86_64-22.03.7.zip
