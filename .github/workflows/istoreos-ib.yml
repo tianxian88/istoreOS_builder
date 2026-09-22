@@ -125,6 +125,7 @@ jobs:
           if [ -f "modify.sh" ]; then
             echo "🏃 发现修改脚本，赋予执行权限并运行..."
             chmod +x modify.sh
+            cp X86/repositories.conf openwrt-ib/
             cp modify.sh openwrt-ib/
             cd openwrt-ib
             ./modify.sh
