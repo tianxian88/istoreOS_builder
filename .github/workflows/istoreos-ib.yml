@@ -99,45 +99,23 @@ jobs:
             cd "$PKG_DIR"
             wget -q "$url"
             
+
             # 3. 即下即解即删：如果是压缩包，立即就地解压并瞬间消灭自身
-            if ls *.tar.xz *.tar.gz *.zip >/dev/null 2>&1; then
-              echo "📦 发现压缩包"
-              processed=0; failed=0
-      
-              for f in *.tar.xz *.tar.gz *.zip; do
-                [ -f "$f" ] || continue
-                echo "🔍 处理: $f"
-        
-                case "$f" in
-                 *.tar.xz)
-                    if tar -Jxf "$f" 2>/dev/null; then
-                      rm -f "$f" && processed=$((processed + 1)) && echo "✅ 处理完成: $f"
-                    else
-                      failed=$((failed + 1)) && echo "❌ 解压失败: $f (保留原文件)"
-                    fi
-                     ;;
-                 *.tar.gz)
-                    if tar -zxf "$f" 2>/dev/null; then
-                      rm -f "$f" && processed=$((processed + 1)) && echo "✅ 处理完成: $f"
-                    else
-                      failed=$((failed + 1)) && echo "❌ 解压失败: $f (保留原文件)"
-                    fi
-                    ;;
-                 *.zip)
-                    if unzip -o "$f" 2>/dev/null; then
-                      rm -f "$f" && processed=$((processed + 1)) && echo "✅ 处理完成: $f"
-                    else
-                      failed=$((failed + 1)) && echo "❌ 解压失败: $f (保留原文件)"
-                    fi
-                     ;;
-                esac
-              done
-      
-              echo "══════════════════════"
-              echo "📊 处理结果: 成功 $processed 个，失败 $failed 个"
-            else
-              echo "ℹ️ 没有需要处理的文件"
+            if ls *.tar.gz >/dev/null 2>&1 || ls *.tgz >/dev/null 2>&1 || ls *.tar.xz >/dev/null 2>&1 || ls *.zip >/dev/null 2>&1; then
+              echo "📦 发现压缩包，立即就地解压并删除自身..."
+              
+              # 解压 tar 格式 (.tar.gz / .tgz / .tar.xz)
+              tar -xf *.tar.gz 2>/dev/null || tar -xf *.tgz 2>/dev/null || tar -xf *.tar.xz 2>/dev/null
+              
+              # 解压 zip 格式 (使用 -q 参数静默解压，-o 参数覆盖同名文件，可根据需要调整)
+              if ls *.zip >/dev/null 2>&1; then
+                unzip -qo *.zip 2>/dev/null
+              fi
+              
+              # 瞬间消灭所有压缩包自身
+              rm -f *.tar.gz *.tgz *.tar.xz *.zip 2>/dev/null
             fi
+
 
             
             # 回到外层仓库根目录，准备读取下一行
