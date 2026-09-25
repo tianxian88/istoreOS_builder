@@ -161,7 +161,7 @@ jobs:
           cd openwrt-ib
           
           # 1. 组合最终包名
-          FINAL_PKGS="luci-base luci-compat $OFFICIAL_PKGS $CUSTOM_PKGS"
+          FINAL_PKGS="luci-compat $OFFICIAL_PKGS $CUSTOM_PKGS luci-i18n-package-manager-zh-cn luci-i18n-base-zh-cn luci-i18n-firewall-zh-cn "
           echo "🚀 Final packages list passing to make image: $FINAL_PKGS"
           
           # 2. 安全加引号防御空变量，动态决定是否注入 FILES 参数
