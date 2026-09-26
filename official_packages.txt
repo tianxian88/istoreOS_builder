@@ -12,6 +12,7 @@
 -luci-i18n-dockerman-zh-cn
 #
 -appfilter
+-kmod-oaf
 -luci-app-oaf
 -luci-i18n-oaf-zh-cn
 # openclash依赖
@@ -430,7 +431,6 @@ kmod-nls-cp936
 kmod-nls-iso8859-1
 kmod-nls-ucs2-utils
 kmod-nls-utf8
-kmod-oaf
 kmod-oid-registry
 kmod-pcnet32
 kmod-pcs-xpcs
