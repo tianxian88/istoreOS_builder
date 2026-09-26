@@ -6,6 +6,17 @@
 luci-i18n-mosdns-zh-cn,https://github.com/tianxian88/luci-app-mosdns/releases/latest/download/x86_64-openwrt-24.10.tar.gz
 #openclash
 luci-app-openclash,https://github.com/vernesong/OpenClash/releases/download/v0.47.156/luci-app-openclash_0.47.156_all.ipk
+libruby3.3,https://downloads.openwrt.org/releases/24.10.8/packages/x86_64/packages/libruby3.3_3.3.10-r1_x86_64.ipk
+libyaml,https://downloads.openwrt.org/releases/24.10.8/packages/x86_64/packages/libyaml_0.2.5-r1_x86_64.ipk
+ruby,https://downloads.openwrt.org/releases/24.10.8/packages/x86_64/packages/ruby_3.3.10-r1_x86_64.ipk
+ruby-bigdecimal,https://downloads.openwrt.org/releases/24.10.8/packages/x86_64/packages/ruby-bigdecimal_3.3.10-r1_x86_64.ipk
+ruby-date,https://downloads.openwrt.org/releases/24.10.8/packages/x86_64/packages/ruby-date_3.3.10-r1_x86_64.ipk
+ruby-digest,https://downloads.openwrt.org/releases/24.10.8/packages/x86_64/packages/ruby-digest_3.3.10-r1_x86_64.ipk
+ruby-enc,https://downloads.openwrt.org/releases/24.10.8/packages/x86_64/packages/ruby-enc_3.3.10-r1_x86_64.ipk
+ruby-pstore,https://downloads.openwrt.org/releases/24.10.8/packages/x86_64/packages/ruby-pstore_3.3.10-r1_x86_64.ipk
+ruby-psych,https://downloads.openwrt.org/releases/24.10.8/packages/x86_64/packages/ruby-psych_3.3.10-r1_x86_64.ipk
+ruby-stringio,https://downloads.openwrt.org/releases/24.10.8/packages/x86_64/packages/ruby-stringio_3.3.10-r1_x86_64.ipk
+ruby-yaml,https://downloads.openwrt.org/releases/24.10.8/packages/x86_64/packages/ruby-yaml_3.3.10-r1_x86_64.ipk
 #easytier
 easytier-noweb,https://github.com/EasyTier/luci-app-easytier/releases/download/v2.6.4/EasyTier-v2.6.4-x86_64-22.03.7.zip
 luci-app-easytier,https://github.com/EasyTier/luci-app-easytier/releases/download/v2.6.4/EasyTier-v2.6.4-x86_64-22.03.7.zip
